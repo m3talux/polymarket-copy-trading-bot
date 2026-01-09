@@ -120,7 +120,7 @@ https://www.youtube.com/watch?v=4f6jHT4-DQs
 
 ## Recommend VPS
 
-Vps: [@TradingVps]([https://t.me/vladmeer67](https://app.tradingvps.io/aff.php?aff=57))
+Vps: [@TradingVps](https://app.tradingvps.io/aff.php?aff=57)
 <img width="890" height="595" alt="image (4)" src="https://github.com/user-attachments/assets/fb311b59-05a6-477a-a8f0-5e8291acf1eb" />
 
 **Disclaimer:** This software is for educational purposes only. Trading involves risk of loss. The developers are not responsible for any financial losses incurred while using this bot.
