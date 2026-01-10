@@ -7,6 +7,8 @@ import { calculateOrderSize, getTradeMultiplier } from '../config/copyStrategy';
 
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
 const COPY_STRATEGY_CONFIG = ENV.COPY_STRATEGY_CONFIG;
+const PREVIEW_MODE = ENV.PREVIEW_MODE;
+const MAX_PRICE_SLIPPAGE = ENV.MAX_PRICE_SLIPPAGE;
 
 // Legacy parameters (for backward compatibility in SELL logic)
 const TRADE_MULTIPLIER = ENV.TRADE_MULTIPLIER;
@@ -195,6 +197,21 @@ const postOrder = async (
             return;
         }
 
+        // PREVIEW MODE: Show what would happen without executing
+        if (PREVIEW_MODE) {
+            Logger.header(`🔍 PREVIEW MODE - Trade Simulation`);
+            Logger.info(`Market: ${trade.title || trade.slug}`);
+            Logger.info(`Side: ${condition.toUpperCase()}`);
+            Logger.info(`Amount: $${orderCalc.finalAmount.toFixed(2)}`);
+            Logger.info(`Price: $${trade.price}`);
+            Logger.info(`📊 ${orderCalc.reasoning}`);
+            Logger.warning(`⚠️  PREVIEW MODE: No actual order placed`);
+            
+            // Mark as processed in preview mode
+            await UserActivity.updateOne({ _id: trade._id }, { bot: true, botExcutedTime: Date.now() });
+            return;
+        }
+
         let remaining = orderCalc.finalAmount;
 
         let retry = 0;
@@ -214,8 +231,8 @@ const postOrder = async (
             }, orderBook.asks[0]);
 
             Logger.info(`Best ask: ${minPriceAsk.size} @ $${minPriceAsk.price}`);
-            if (parseFloat(minPriceAsk.price) - 0.05 > trade.price) {
-                Logger.warning('Price slippage too high - skipping trade');
+            if (parseFloat(minPriceAsk.price) - MAX_PRICE_SLIPPAGE > trade.price) {
+                Logger.warning(`Price slippage too high - skipping trade (max slippage: $${MAX_PRICE_SLIPPAGE})`);
                 await UserActivity.updateOne({ _id: trade._id }, { bot: true });
                 break;
             }

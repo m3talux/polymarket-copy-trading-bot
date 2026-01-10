@@ -345,6 +345,17 @@ export const ENV = {
         process.env.TRADE_AGGREGATION_WINDOW_SECONDS || '300',
         10
     ), // 5 minutes default
+    // Market filter settings
+    MARKET_INCLUDE_KEYWORDS: process.env.MARKET_INCLUDE_KEYWORDS
+        ? process.env.MARKET_INCLUDE_KEYWORDS.split(',').map(k => k.trim()).filter(k => k.length > 0)
+        : [],
+    MARKET_EXCLUDE_KEYWORDS: process.env.MARKET_EXCLUDE_KEYWORDS
+        ? process.env.MARKET_EXCLUDE_KEYWORDS.split(',').map(k => k.trim()).filter(k => k.length > 0)
+        : [],
+    MARKET_INCLUDE_REGEX: process.env.MARKET_INCLUDE_REGEX || '',
+    MARKET_EXCLUDE_REGEX: process.env.MARKET_EXCLUDE_REGEX || '',
+    PREVIEW_MODE: process.env.PREVIEW_MODE === 'true',
+    MAX_PRICE_SLIPPAGE: parseFloat(process.env.MAX_PRICE_SLIPPAGE || '0.05'),
     MONGO_URI: process.env.MONGO_URI as string,
     RPC_URL: process.env.RPC_URL as string,
     USDC_CONTRACT_ADDRESS: process.env.USDC_CONTRACT_ADDRESS as string,

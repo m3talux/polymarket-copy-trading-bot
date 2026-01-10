@@ -7,6 +7,79 @@ const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const TOO_OLD_TIMESTAMP = ENV.TOO_OLD_TIMESTAMP;
 const FETCH_INTERVAL = ENV.FETCH_INTERVAL;
 
+/**
+ * Filter markets based on environment configuration
+ * Supports include/exclude keywords and regex patterns
+ */
+const shouldCopyMarket = (title: string, slug: string): boolean => {
+    const {
+        MARKET_INCLUDE_KEYWORDS,
+        MARKET_EXCLUDE_KEYWORDS,
+        MARKET_INCLUDE_REGEX,
+        MARKET_EXCLUDE_REGEX
+    } = ENV;
+
+    // If no filters configured, copy all markets
+    const hasIncludeFilter = MARKET_INCLUDE_KEYWORDS.length > 0 || MARKET_INCLUDE_REGEX.length > 0;
+    const hasExcludeFilter = MARKET_EXCLUDE_KEYWORDS.length > 0 || MARKET_EXCLUDE_REGEX.length > 0;
+
+    if (!hasIncludeFilter && !hasExcludeFilter) {
+        return true; // Copy all markets
+    }
+
+    let shouldInclude = true;
+
+    // Check include filters (if any)
+    if (hasIncludeFilter) {
+        shouldInclude = false; // Default to false if include filters exist
+
+        // Check include keywords
+        for (const keyword of MARKET_INCLUDE_KEYWORDS) {
+            if (title.toLowerCase().includes(keyword.toLowerCase())) {
+                shouldInclude = true;
+                break;
+            }
+        }
+
+        // Check include regex (if not already included)
+        if (!shouldInclude && MARKET_INCLUDE_REGEX) {
+            try {
+                const includeRegex = new RegExp(MARKET_INCLUDE_REGEX, 'i');
+                if (includeRegex.test(title)) {
+                    shouldInclude = true;
+                }
+            } catch (error) {
+                Logger.error(`Invalid MARKET_INCLUDE_REGEX: ${MARKET_INCLUDE_REGEX}`);
+            }
+        }
+    }
+
+    // Check exclude filters (if any)
+    if (shouldInclude && hasExcludeFilter) {
+        // Check exclude keywords
+        for (const keyword of MARKET_EXCLUDE_KEYWORDS) {
+            if (title.toLowerCase().includes(keyword.toLowerCase())) {
+                shouldInclude = false;
+                break;
+            }
+        }
+
+        // Check exclude regex (if not already excluded)
+        if (shouldInclude && MARKET_EXCLUDE_REGEX) {
+            try {
+                const excludeRegex = new RegExp(MARKET_EXCLUDE_REGEX, 'i');
+                if (excludeRegex.test(title)) {
+                    shouldInclude = false;
+                }
+            } catch (error) {
+                Logger.error(`Invalid MARKET_EXCLUDE_REGEX: ${MARKET_EXCLUDE_REGEX}`);
+            }
+        }
+    }
+
+    return shouldInclude;
+};
+
 if (!USER_ADDRESSES || USER_ADDRESSES.length === 0) {
     throw new Error('USER_ADDRESSES is not defined or empty');
 }
@@ -120,6 +193,10 @@ const fetchTradeData = async () => {
             for (const activity of activities) {
                 // Skip if too old
                 if (activity.timestamp < TOO_OLD_TIMESTAMP) {
+                    continue;
+                }
+
+                if (!shouldCopyMarket(activity.title || '', activity.slug || '')) {
                     continue;
                 }
 

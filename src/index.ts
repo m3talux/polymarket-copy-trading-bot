@@ -90,6 +90,14 @@ export const main = async () => {
         const clobClient = await createClobClient();
         Logger.success('CLOB client ready');
 
+        // Check if preview mode is enabled
+        if (ENV.PREVIEW_MODE) {
+            Logger.header('🔍 PREVIEW MODE ENABLED');
+            Logger.warning('No actual trades will be executed');
+            Logger.info('Use this mode to test your configuration safely');
+            Logger.separator();
+        }
+
         Logger.separator();
         Logger.info('Starting trade monitor...');
         tradeMonitor();

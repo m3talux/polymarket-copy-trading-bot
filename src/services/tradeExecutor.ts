@@ -6,6 +6,7 @@ import fetchData from '../utils/fetchData';
 import getMyBalance from '../utils/getMyBalance';
 import postOrder from '../utils/postOrder';
 import Logger from '../utils/logger';
+import { calculateOrderSize } from '../config/copyStrategy';
 
 const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
@@ -153,6 +154,7 @@ const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]) => {
         Logger.trade(trade.userAddress, trade.side || 'UNKNOWN', {
             asset: trade.asset,
             side: trade.side,
+            outcome: trade.outcome,
             amount: trade.usdcSize,
             price: trade.price,
             slug: trade.slug,
@@ -207,6 +209,7 @@ const doAggregatedTrading = async (clobClient: ClobClient, aggregatedTrades: Agg
         Logger.header(`📊 AGGREGATED TRADE (${agg.trades.length} trades combined)`);
         Logger.info(`Market: ${agg.slug || agg.asset}`);
         Logger.info(`Side: ${agg.side}`);
+        Logger.info(`Outcome: ${agg.trades[0]?.outcome || 'Unknown'}`);
         Logger.info(`Total volume: $${agg.totalUsdcSize.toFixed(2)}`);
         Logger.info(`Average price: $${agg.averagePrice.toFixed(4)}`);
 
@@ -296,10 +299,29 @@ const tradeExecutor = async (clobClient: ClobClient) => {
 
                 // Add trades to aggregation buffer
                 for (const trade of trades) {
-                    // Only aggregate BUY trades below minimum threshold
-                    if (trade.side === 'BUY' && trade.usdcSize < TRADE_AGGREGATION_MIN_TOTAL_USD) {
+                    // Get current balances for calculation
+                    const my_balance = await getMyBalance(PROXY_WALLET);
+                    
+                    // Get trader's current balance from positions
+                    const user_positions: UserPositionInterface[] = await fetchData(
+                        `https://data-api.polymarket.com/positions?user=${trade.userAddress}`
+                    );
+                    const user_balance = user_positions.reduce((total, pos) => {
+                        return total + (pos.currentValue || 0);
+                    }, 0);
+                    
+                    // Calculate what your copy amount would be
+                    const copyAmount = calculateOrderSize(
+                        ENV.COPY_STRATEGY_CONFIG,
+                        trade.usdcSize,
+                        my_balance,
+                        0  // currentPositionSize (not needed for aggregation decision)
+                    );
+                    
+                    // Aggregate trades where your copy amount would be below minimum
+                    if (trade.side === 'BUY' && copyAmount.finalAmount < TRADE_AGGREGATION_MIN_TOTAL_USD) {
                         Logger.info(
-                            `Adding $${trade.usdcSize.toFixed(2)} ${trade.side} trade to aggregation buffer for ${trade.slug || trade.asset}`
+                            `Adding $${trade.usdcSize.toFixed(2)} ${trade.side} trade to aggregation buffer (your copy: $${copyAmount.finalAmount.toFixed(2)})`
                         );
                         addToAggregationBuffer(trade);
                     } else {

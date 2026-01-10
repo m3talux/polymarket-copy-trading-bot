@@ -82,6 +82,11 @@ class Logger {
             const sideColor = details.side === 'BUY' ? chalk.green : chalk.red;
             console.log(chalk.gray(`Side:   ${sideColor.bold(details.side)}`));
         }
+        if (details.outcome) {
+            const outcomeColor = details.outcome.toLowerCase().includes('up') ? chalk.green : 
+                               details.outcome.toLowerCase().includes('down') ? chalk.red : chalk.yellow;
+            console.log(chalk.gray(`Outcome: ${outcomeColor.bold(details.outcome)}`));
+        }
         if (details.amount) {
             console.log(chalk.gray(`Amount: ${chalk.yellow(`$${details.amount}`)}`));
         }
